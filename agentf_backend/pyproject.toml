@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "agentf-backend"
+version = "0.1.0"
+description = "AGENT-F Enterprise Financial Agent Backend"
+authors = ["Admin <admin@example.com>"]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "*"
+uvicorn = "*"
+pydantic = "*"
+pydantic-settings = "*"
+openai = "*"
+sqlalchemy = "*"
+asyncpg = "*"
+python-jose = {extras = ["cryptography"], version = "*"}
+python-multipart = "*"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

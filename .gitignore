@@ -1,0 +1,58 @@
+# Core Blueprint & Documentation (Internal)
+blueprint.md
+directory-structure-example.md
+example-deepseek-nvidia.txt
+nextjs-16-2-7-docs.txt
+test/
+task.md
+implementation_plan.md
+walkthrough.md
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Next.js (agentf_frontend)
+agentf_frontend/node_modules/
+agentf_frontend/.next/
+agentf_frontend/out/
+agentf_frontend/build/
+agentf_frontend/.pnp.*
+agentf_frontend/.yarn/*
+!agentf_frontend/.yarn/patches
+!agentf_frontend/.yarn/plugins
+!agentf_frontend/.yarn/releases
+!agentf_frontend/.yarn/sdks
+!agentf_frontend/.yarn/versions
+agentf_frontend/npm-debug.log*
+agentf_frontend/yarn-debug.log*
+agentf_frontend/yarn-error.log*
+
+# Python (agentf_backend)
+agentf_backend/venv/
+agentf_backend/env/
+agentf_backend/ENV/
+agentf_backend/env.bak/
+agentf_backend/venv.bak/
+agentf_backend/__pycache__/
+agentf_backend/*.py[cod]
+agentf_backend/*$py.class
+agentf_backend/.pytest_cache/
+agentf_backend/.coverage
+agentf_backend/htmlcov/
+agentf_backend/.tox/
+agentf_backend/build/
+agentf_backend/dist/
+agentf_backend/sdist/
+agentf_backend/var/
+agentf_backend/wheels/
+agentf_backend/*.egg-info/
+agentf_backend/.installed.cfg
+agentf_backend/*.egg
+
+# OS Files
+.DS_Store
+Thumbs.db
