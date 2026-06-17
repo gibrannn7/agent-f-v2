@@ -16,6 +16,10 @@ sqlalchemy = "*"
 asyncpg = "*"
 python-jose = {extras = ["cryptography"], version = "*"}
 python-multipart = "*"
+pandas = "*"
+openpyxl = "*"
+matplotlib = "^3.11.0"
+seaborn = "^0.13.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"

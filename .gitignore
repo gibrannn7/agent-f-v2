@@ -1,12 +1,7 @@
 # Core Blueprint & Documentation (Internal)
-blueprint.md
-directory-structure-example.md
-example-deepseek-nvidia.txt
-nextjs-16-2-7-docs.txt
 test/
-task.md
-implementation_plan.md
-walkthrough.md
+test-result/
+docs/
 
 # Environment Variables
 .env

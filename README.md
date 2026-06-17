@@ -1,6 +1,6 @@
 # AGENT-F: Enterprise Financial Orchestration Matrix
 
-AGENT-F is a high-performance, multi-tenant financial orchestration matrix. It utilizes a multi-agent AI framework (powered by DeepSeek v4 via Nvidia NIM) mapped strictly into a secure Python 3.12/FastAPI execution layer. The frontend is delivered through a modern Next.js 16.2.7 client integrated deeply with Supabase authentication and Tailwind CSS 4 Radix UI primitives.
+AGENT-F is a high-performance, multi-tenant financial orchestration matrix. It utilizes a multi-agent AI framework (powered by the official DeepSeek API) mapped strictly into a secure Python 3.12/FastAPI execution layer. The frontend is delivered through a modern Next.js 16.2.7 client integrated deeply with Supabase authentication and Tailwind CSS 4 Radix UI primitives.
 
 ## 🚀 Key Architectural Features
 
@@ -44,7 +44,7 @@ agent-f/
 - **Python 3.12** configured locally with `poetry`.
 - **Node.js v20+** configured with `npm`.
 - A fully provisioned **Supabase** instance (Auth and Postgres).
-- A valid **Nvidia NIM API Key** targeting `deepseek-v4-pro`.
+- A valid **DeepSeek API Key** targeting `deepseek-v4-pro`.
 
 ## ⚙️ Initializing the Environment
 
