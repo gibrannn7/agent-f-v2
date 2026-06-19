@@ -28,14 +28,7 @@ export default function WorkspacePage() {
   return (
     <div className="animate-in fade-in duration-500 max-w-6xl mx-auto p-8 space-y-8 min-h-full">
       
-      {!sessionId && (
-        <div className="flex flex-col space-y-1 mb-6">
-          <h2 className="text-2xl font-semibold tracking-tight text-slate-200">{greeting}</h2>
-          <p className="text-sm text-slate-500">Enterprise analytical sandbox is standing by.</p>
-        </div>
-      )}
-
-      {!sessionId && (
+            {!sessionId && (
         <FileUploadZone onSessionCreated={(id) => {
           setSessionId(id)
           setIsCompleted(false)
