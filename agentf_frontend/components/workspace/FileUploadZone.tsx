@@ -10,6 +10,14 @@ interface FileUploadZoneProps {
   onSessionCreated: (sessionId: string) => void
 }
 
+const formatBytes = (bytes: number) => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
 export function FileUploadZone({ onSessionCreated }: FileUploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [files, setFiles] = useState<File[]>([])
@@ -17,7 +25,7 @@ export function FileUploadZone({ onSessionCreated }: FileUploadZoneProps) {
   const [error, setError] = useState<string | null>(null)
   
   const [customPrompt, setCustomPrompt] = useState('')
-  const [newsToggle, setNewsToggle] = useState(false)
+  const [newsToggle, setNewsToggle] = useState('disable')
   
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -72,7 +80,7 @@ export function FileUploadZone({ onSessionCreated }: FileUploadZoneProps) {
       if (customPrompt.trim()) {
         formData.append('user_custom_prompt', customPrompt.trim())
       }
-      formData.append('news_toggle', String(newsToggle))
+      formData.append('news_toggle', String(newsToggle === 'enable'))
 
       const res = await fetchWithAuth('/api/v1/pipeline/process', {
         method: 'POST',
@@ -94,26 +102,30 @@ export function FileUploadZone({ onSessionCreated }: FileUploadZoneProps) {
 
   return (
     <div className="space-y-6">
-      <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-md">
+      <Card className="border-slate-800/80 bg-[#0A0A0A] shadow-xl">
         <CardContent className="p-8 space-y-8">
           <div
-            className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 transition-colors ${
-              isDragging ? 'border-indigo-500 bg-indigo-500/10' : 'border-slate-700 bg-slate-900/50'
+            className={`flex flex-col items-center justify-center rounded-lg border border-dashed p-12 transition-all cursor-pointer ${
+              isDragging ? 'border-indigo-500 bg-indigo-500/5' : 'border-slate-700 hover:border-slate-500 hover:bg-slate-900/30'
             }`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
           >
-            <UploadCloud className="mb-4 h-12 w-12 text-slate-400" />
-            <h3 className="mb-2 text-lg font-medium text-slate-200">
-              Drag & Drop Enterprise Data Payloads
+            <UploadCloud className="mb-4 h-10 w-10 text-slate-500" />
+            <h3 className="mb-2 text-sm font-medium text-slate-300">
+              Drag & Drop Financial Matrices
             </h3>
-            <p className="mb-6 text-sm text-slate-400">
-              Strictly supports raw .CSV and .XLSX matrices
+            <p className="mb-6 text-xs text-slate-500 uppercase tracking-wider">
+              Strictly .CSV or .XLSX
             </p>
-            <Button type="button" variant="secondary" disabled={isUploading}>
-              Browse Files
+            <Button 
+              type="button" 
+              className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs px-6 py-2 rounded shadow-none" 
+              disabled={isUploading}
+            >
+              Browse Local System
             </Button>
             <input
               type="file"
@@ -126,57 +138,59 @@ export function FileUploadZone({ onSessionCreated }: FileUploadZoneProps) {
           </div>
 
           {error && (
-            <div className="rounded-md border border-red-500/50 bg-red-500/10 p-4 text-sm text-red-400">
-              {error}
+            <div className="rounded border border-red-900/50 bg-red-950/30 p-4 text-xs font-mono text-red-400">
+              [SYSTEM ERROR]: {error}
             </div>
           )}
 
-          <div className="space-y-4 rounded-md border border-slate-800 bg-slate-900/80 p-6">
-            <h4 className="text-sm font-medium text-slate-300">Strategic Constraints (Optional)</h4>
+          <div className="space-y-4 rounded border border-slate-800/80 bg-[#050505] p-6">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Execution Parameters</h4>
             
             <div className="space-y-2">
-              <label htmlFor="custom-prompt" className="text-xs text-slate-400 block">
-                Analysis Notes / Custom Constraints
+              <label htmlFor="custom-prompt" className="text-xs text-slate-500 block">
+                Target Constraints
               </label>
               <textarea
                 id="custom-prompt"
                 value={customPrompt}
                 onChange={(e) => setCustomPrompt(e.target.value)}
-                placeholder="e.g. Focus exclusively on Q3 liquidity risks. Ignore APAC region data."
-                className="w-full min-h-[100px] rounded-md border border-slate-700 bg-slate-950 p-3 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-y"
+                placeholder="e.g. Focus exclusively on Q3 liquidity risks."
+                className="w-full min-h-[80px] rounded border border-slate-800 bg-[#0A0A0A] p-3 text-xs font-mono text-slate-300 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 resize-y transition-colors"
               />
             </div>
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center justify-between pt-4 border-t border-slate-800/50">
               <div className="flex items-center space-x-3">
-                <Globe className="h-5 w-5 text-slate-400" />
+                <Globe className="h-4 w-4 text-slate-500" />
                 <div className="flex flex-col">
-                  <span className="text-sm text-slate-200">Incorporate Macro Economic Context (NewsAPI)</span>
-                  <span className="text-xs text-slate-500">Enable real-time hybrid external synthesis</span>
+                  <span className="text-xs text-slate-300">Macro Economic Context (NewsAPI)</span>
+                  <span className="text-[10px] text-slate-500">External market synthesis integration</span>
                 </div>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  className="sr-only peer" 
-                  checked={newsToggle}
-                  onChange={(e) => setNewsToggle(e.target.checked)}
-                />
-                <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-              </label>
+              <select
+                value={newsToggle}
+                onChange={(e) => setNewsToggle(e.target.value)}
+                className="bg-[#0A0A0A] border border-slate-800 text-slate-300 text-xs rounded block p-2 outline-none focus:border-indigo-500/50 cursor-pointer"
+              >
+                <option value="disable">Disable</option>
+                <option value="enable">Enable Integration</option>
+              </select>
             </div>
           </div>
 
           {files.length > 0 && (
-            <div className="space-y-6">
-              <div className="space-y-4">
-                <h4 className="text-sm font-medium text-slate-300">Selected Payloads</h4>
-                <div className="grid gap-3">
+            <div className="space-y-6 pt-4 border-t border-slate-800/50">
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Queued Payloads</h4>
+                <div className="grid gap-2">
                   {files.map((f, i) => (
-                    <div key={i} className="flex items-center justify-between rounded-md border border-slate-700 bg-slate-800 p-3">
-                      <div className="flex items-center space-x-3">
-                        <FileSpreadsheet className="h-5 w-5 text-indigo-400" />
-                        <span className="text-sm text-slate-200">{f.name}</span>
+                    <div key={i} className="flex items-center justify-between rounded border border-slate-800/80 bg-[#050505] p-3 transition-colors hover:border-slate-700">
+                      <div className="flex items-center space-x-3 overflow-hidden">
+                        <FileSpreadsheet className="h-4 w-4 text-indigo-500/70 shrink-0" />
+                        <div className="flex flex-col truncate">
+                          <span className="text-xs text-slate-300 font-mono truncate">{f.name}</span>
+                          <span className="text-[10px] text-slate-600">{formatBytes(f.size)}</span>
+                        </div>
                       </div>
                       <button
                         type="button"
@@ -184,26 +198,28 @@ export function FileUploadZone({ onSessionCreated }: FileUploadZoneProps) {
                           e.stopPropagation()
                           removeFile(i)
                         }}
-                        className="text-xs text-slate-400 hover:text-slate-200"
+                        className="text-[10px] uppercase font-bold text-slate-500 hover:text-red-400 transition-colors ml-4 shrink-0"
                       >
-                        Remove
+                        Drop
                       </button>
                     </div>
                   ))}
                 </div>
               </div>
 
-
-
-              <div className="flex justify-end pt-4">
-                <Button onClick={handleUpload} disabled={isUploading} className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[180px]">
+              <div className="flex justify-end pt-2">
+                <Button 
+                  onClick={handleUpload} 
+                  disabled={isUploading} 
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-8 py-2 h-auto rounded shadow-lg shadow-indigo-900/20"
+                >
                   {isUploading ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
                       Executing Pipeline
                     </>
                   ) : (
-                    'Run Analysis'
+                    'Initialize Pipeline'
                   )}
                 </Button>
               </div>

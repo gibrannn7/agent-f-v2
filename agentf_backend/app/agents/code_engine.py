@@ -24,11 +24,16 @@ def generate_and_execute_code(state: AgentFSharedState, schema_info: dict) -> Ag
        - For Excel: `df = pd.read_excel(filepath)`
        - MANDATORY COLUMN CLEANING: `df.columns = df.columns.astype(str).str.strip().str.replace('\\ufeff', '').str.replace('ï»¿', '')`
        - Do NOT attempt to access any data columns before successfully executing the column cleaning line above.
-    3. Execute robust mathematical diagnostics: Pareto 80/20, AOV, IQR Outliers, Daily/Monthly Volatility.
-    4. Generate Professional Visualizations using matplotlib/seaborn (save to io.BytesIO, encode base64).
-    5. Output Format: Output a single minimized JSON string to sys.stdout (must not exceed 500KB). Inject the base64 encoded chart string inside the JSON under the exact key `"_charts"` (must be a list of strings).
-    6. Architecture: Write flat, procedural code. DO NOT wrap logic inside `main()` functions.
-    7. EXTERNAL NETWORK & SECURE SANDBOX POLICY:
+    3. DEFENSIVE TOTAL ASSETS PROXY: If 'TotalAssets' is missing from the dataset but 'NetIncome' and 'ROA' are present, you MUST calculate it dynamically immediately after column cleaning:
+       `if 'TotalAssets' not in df.columns and 'NetIncome' in df.columns and 'ROA' in df.columns:`
+       `    df['TotalAssets'] = df['NetIncome'] / (df['ROA'] / 100)`
+       Ensure 'TotalAssets' exists so AssetTurnover and DuPont charts never fail.
+    4. DUPONT ANALYSIS OUTPUT SCHEMA: Your JSON output MUST include a `"dupont_analysis"` key. Inside it, you MUST provide a `"summary"` object that contains the exact keys `"NPM"`, `"AT"`, `"EM"`, and `"ROE"`. These should represent the aggregated or latest average values. DO NOT just output an array of records without this specific summary object structure.
+    5. Execute robust mathematical diagnostics: Pareto 80/20, AOV, IQR Outliers, Daily/Monthly Volatility.
+    6. Generate Professional Visualizations using matplotlib/seaborn (save to io.BytesIO, encode base64).
+    7. Output Format: Output a single minimized JSON string to sys.stdout (must not exceed 500KB). Inject the base64 encoded chart string inside the JSON under the exact key `"_charts"` (must be a list of strings).
+    8. Architecture: Write flat, procedural code. DO NOT wrap logic inside `main()` functions.
+    9. EXTERNAL NETWORK & SECURE SANDBOX POLICY:
        - The execution environment is an isolated sandbox. DO NOT use `import requests` (it will cause ModuleNotFoundError).
        - DO NOT attempt to establish live HTTP connections. Use the provided News Context below for your macro-economic analysis.
        - If you MUST simulate API fetching defensively, use a hyper-concise block: `try: import urllib.request; ... except Exception: news_data = 'Macro context applied'`
@@ -61,6 +66,7 @@ def generate_and_execute_code(state: AgentFSharedState, schema_info: dict) -> Ag
     for attempt in range(MAX_RETRIES):
         state.stream_queue.append({"type": "output", "token": f"\n\n[SYSTEM]: Initiating Agent 2 Quant Sandbox (Attempt {attempt + 1}/{MAX_RETRIES})...\n"})
         
+        # PERBAIKAN: Hapus argumen timeout. llm.py sudah menanganinya secara native via OpenAI Client.
         code_str = call_deepseek_text(messages, on_token_chunk=stream_callback)
         
         if code_str.startswith("```python"):
@@ -69,6 +75,8 @@ def generate_and_execute_code(state: AgentFSharedState, schema_info: dict) -> Ag
             code_str = code_str.split("```")[1].split("```")[0].strip()
             
         state.stream_queue.append({"type": "output", "token": f"\n\n[SYSTEM]: Code generation complete. Executing in secure sandbox...\n"})
+        
+        # PERBAIKAN: Hapus argumen timeout. sandbox.py sudah memiliki timeout=60 pada subprocess.run
         result = execute_sandbox_code(code_str)
         
         if result["status"] == "success":
@@ -81,7 +89,7 @@ def generate_and_execute_code(state: AgentFSharedState, schema_info: dict) -> Ag
             except json.JSONDecodeError:
                 state.stream_queue.append({"type": "output", "token": f"[SYSTEM ERROR]: Output parsing failed.\n"})
                 messages.append({"role": "assistant", "content": code_str})
-                messages.append({"role": "user", "content": "Execution returned invalid JSON. Output must be purely a valid JSON string containing mathematical aggregations and _charts. Fix the code."})
+                messages.append({"role": "user", "content": "Execution returned invalid JSON. Output must be purely a valid JSON string containing mathematical aggregations and _charts. Fix the code. Ensure dupont_analysis.summary contains short keys NPM, AT, EM, ROE."})
             except ValidationError as ve:
                 state.stream_queue.append({"type": "output", "token": f"[SYSTEM ERROR]: Memory Cap Exceeded (500KB).\n"})
                 messages.append({"role": "assistant", "content": code_str})
@@ -89,7 +97,7 @@ def generate_and_execute_code(state: AgentFSharedState, schema_info: dict) -> Ag
         else:
             state.stream_queue.append({"type": "output", "token": f"\n[SYSTEM ERROR]: Code execution failed with traceback:\n{result['traceback']}\n"})
             messages.append({"role": "assistant", "content": code_str})
-            messages.append({"role": "user", "content": f"Execution failed with traceback:\n{result['traceback']}\nEnsure you strictly apply the df.columns defensive sanitization and avoid import requests. Fix the code."})
+            messages.append({"role": "user", "content": f"Execution failed with traceback:\n{result['traceback']}\nEnsure you strictly apply the df.columns defensive sanitization, use the defensive TotalAssets proxy if missing, and avoid import requests. Fix the code."})
             
         if attempt == MAX_RETRIES - 1:
             raise RuntimeError("Self-healing loop exhausted (3/3 attempts failed). Unrecoverable code syntax or logic error.")

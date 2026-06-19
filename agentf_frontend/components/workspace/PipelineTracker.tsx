@@ -19,14 +19,12 @@ export function PipelineTracker({ sessionId, onComplete }: PipelineTrackerProps)
   const [streamData, setStreamData] = useState<StreamToken[]>([])
   const [status, setStatus] = useState<'connecting' | 'processing' | 'completed' | 'error'>('connecting')
   
-  // UX Scroll Engine Refactoring
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [isAutoScroll, setIsAutoScroll] = useState(true)
 
   const handleScroll = () => {
     const container = scrollContainerRef.current;
     if (container) {
-      // Menghentikan auto-scroll jika pengguna sedang membaca log ke atas
       const isAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 50;
       setIsAutoScroll(isAtBottom);
     }
@@ -34,7 +32,6 @@ export function PipelineTracker({ sessionId, onComplete }: PipelineTrackerProps)
 
   useEffect(() => {
     if (isAutoScroll && scrollContainerRef.current) {
-      // Direct DOM mutation untuk menghilangkan efek bouncing animasi
       scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
     }
   }, [streamData, isAutoScroll])
@@ -71,7 +68,6 @@ export function PipelineTracker({ sessionId, onComplete }: PipelineTrackerProps)
               setStatus('completed')
               eventSource.close()
             } else {
-              // Strict Deep Cloning Immutability
               setStreamData((prev) => {
                 if (prev.length === 0) {
                   return [{ type: data.type || 'output', content: data.token }];
@@ -110,20 +106,20 @@ export function PipelineTracker({ sessionId, onComplete }: PipelineTrackerProps)
   }, [sessionId])
 
   return (
-    <Card className="border-slate-800 bg-[#050505] shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <Card className="border-slate-800/80 bg-[#050505] shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-700">
       <CardContent className="p-0">
-        <div className="bg-slate-900 border-b border-slate-800 px-4 py-2 flex items-center justify-between">
+        <div className="bg-[#0A0A0A] border-b border-slate-800/80 px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <div className="flex space-x-1.5">
-              <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
-              <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
-              <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500/80"></div>
+              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></div>
+              <div className="w-2.5 h-2.5 rounded-full bg-green-500/80"></div>
             </div>
-            <span className="text-slate-400 text-xs font-mono ml-4 select-none">agent-f_orchestrator_sandbox</span>
+            <span className="text-slate-500 text-[10px] font-mono ml-4 select-none uppercase tracking-widest">agent_f_sandbox_env</span>
           </div>
-          <div className="text-xs font-mono font-semibold">
-            {status === 'connecting' && <span className="text-yellow-400 animate-pulse">CONNECTING...</span>}
-            {status === 'processing' && <span className="text-emerald-400 animate-pulse">EXECUTING_MODELS</span>}
+          <div className="text-[10px] font-mono font-bold tracking-wider">
+            {status === 'connecting' && <span className="text-yellow-500 animate-pulse">ESTABLISHING_LINK...</span>}
+            {status === 'processing' && <span className="text-emerald-500 animate-pulse">EXECUTING_MODELS</span>}
             {status === 'completed' && <span className="text-indigo-400">PIPELINE_COMPLETE</span>}
             {status === 'error' && <span className="text-red-500">SYS_HALT</span>}
           </div>
@@ -132,32 +128,42 @@ export function PipelineTracker({ sessionId, onComplete }: PipelineTrackerProps)
         <div 
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className="p-6 font-mono text-sm h-[600px] overflow-y-auto overflow-x-hidden"
+          className="p-6 font-mono text-xs h-[600px] overflow-y-auto overflow-x-hidden leading-relaxed"
         >
           {streamData.map((block, idx) => (
-             <div key={idx} className="mb-1 text-emerald-300">
+             <div key={idx} className="mb-1 text-emerald-400">
                <ReactMarkdown
                  remarkPlugins={[remarkGfm]}
                  components={{
                    code({node, className, children, ...props}) {
                      const match = /language-(\w+)/.exec(className || '')
                      return match ? (
-                       <div className="my-4 rounded-md border border-slate-800 overflow-hidden">
-                         <div className="bg-slate-900 px-4 py-1 text-xs text-slate-400 border-b border-slate-800">
+                       <div className="my-4 rounded border border-slate-800 overflow-hidden shadow-md">
+                         <div className="bg-[#0A0A0A] px-4 py-2 text-[10px] text-slate-500 border-b border-slate-800 uppercase tracking-widest">
                            {match[1]}
                          </div>
-                         <code className="block bg-[#0A0A0A] p-4 text-emerald-400 overflow-x-auto" {...props}>
+                         <code className="block bg-[#050505] p-4 text-emerald-400 overflow-x-auto" {...props}>
                            {children}
                          </code>
                        </div>
                      ) : (
-                       <code className="bg-slate-800/50 px-1.5 py-0.5 rounded text-emerald-200" {...props}>
+                       <code className="bg-slate-800/40 px-1.5 py-0.5 rounded text-emerald-300 border border-slate-700/50" {...props}>
                          {children}
                        </code>
                      )
                    },
                    p({children}) {
-                     return <p className="mb-2 whitespace-pre-wrap">{children}</p>
+                     const textContent = React.Children.toArray(children).join('');
+                     
+                     // Frontend Auto-Coloring Override
+                     if (textContent.includes('[SYSTEM ERROR]')) {
+                       return <p className="mb-2 whitespace-pre-wrap text-red-500 font-bold">{children}</p>;
+                     }
+                     if (textContent.includes('[SYSTEM]')) {
+                       return <p className="mb-2 whitespace-pre-wrap text-slate-400 font-sans tracking-wide">{children}</p>;
+                     }
+                     // Default: Force Emerald color for raw text assuming it's unformatted code/logic.
+                     return <p className="mb-2 whitespace-pre-wrap text-emerald-400">{children}</p>;
                    }
                  }}
                >
@@ -167,22 +173,20 @@ export function PipelineTracker({ sessionId, onComplete }: PipelineTrackerProps)
           ))}
 
           {status === 'processing' && (
-            <span className="animate-pulse text-green-400 font-bold">_</span>
+            <span className="animate-pulse text-emerald-500 font-bold">_</span>
           )}
           
           {status === 'error' && (
-            <div className="mt-4 text-red-500 font-bold border border-red-500/30 bg-red-500/10 p-4 rounded-md">
-              [PROCESS TERMINATED]
-              <br />
-              The analytical pipeline encountered an unrecoverable exception or hard timeout.
+            <div className="mt-6 text-red-400 text-xs font-mono border border-red-900/50 bg-red-950/20 p-4 rounded uppercase tracking-wider">
+              [PROCESS TERMINATED]<br />
+              The analytical pipeline encountered an unrecoverable exception.
             </div>
           )}
 
           {status === 'completed' && (
-            <div className="mt-4 text-emerald-400 font-bold border border-emerald-500/30 bg-emerald-500/10 p-4 rounded-md animate-pulse">
-              [PROCESS COMPLETED]
-              <br />
-              Handing over to Analytical Dashboard...
+            <div className="mt-6 text-emerald-400 text-xs font-mono border border-emerald-900/50 bg-emerald-950/20 p-4 rounded uppercase tracking-wider animate-pulse">
+              [PROCESS COMPLETED]<br />
+              Handing over architecture to analytical dashboard...
             </div>
           )}
         </div>

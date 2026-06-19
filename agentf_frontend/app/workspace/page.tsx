@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { FileUploadZone } from '@/components/workspace/FileUploadZone'
 import { PipelineTracker } from '@/components/workspace/PipelineTracker'
 import { AnalyticsDashboard } from '@/components/workspace/AnalyticsDashboard'
@@ -14,13 +14,26 @@ export default function WorkspacePage() {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [isCompleted, setIsCompleted] = useState(false)
   const [executionLog, setExecutionLog] = useState<StreamToken[]>([])
+  const [greeting, setGreeting] = useState('')
+
+  useEffect(() => {
+    const hour = new Date().getHours()
+    let timeGreeting = 'Good evening'
+    if (hour >= 5 && hour < 12) timeGreeting = 'Good morning'
+    else if (hour >= 12 && hour < 18) timeGreeting = 'Good afternoon'
+    
+    setGreeting(`${timeGreeting}, Users.`)
+  }, [])
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 max-w-6xl mx-auto p-8">
-      <div className="flex flex-col space-y-2 border-b border-slate-800 pb-6">
-        <h2 className="text-3xl font-semibold tracking-tight text-slate-100">AGENT-F Orchestration Cockpit</h2>
-        <p className="text-slate-400">Initialize the multi-agent analytical sequence by uploading enterprise data payloads.</p>
-      </div>
+    <div className="animate-in fade-in duration-500 max-w-6xl mx-auto p-8 space-y-8 min-h-full">
+      
+      {!sessionId && (
+        <div className="flex flex-col space-y-1 mb-6">
+          <h2 className="text-2xl font-semibold tracking-tight text-slate-200">{greeting}</h2>
+          <p className="text-sm text-slate-500">Enterprise analytical sandbox is standing by.</p>
+        </div>
+      )}
 
       {!sessionId && (
         <FileUploadZone onSessionCreated={(id) => {
@@ -30,7 +43,6 @@ export default function WorkspacePage() {
         }} />
       )}
 
-      {/* PipelineTracker mengeksekusi onComplete dengan membawa array memori log */}
       {sessionId && !isCompleted && (
         <PipelineTracker 
           sessionId={sessionId} 
@@ -41,7 +53,6 @@ export default function WorkspacePage() {
         />
       )}
 
-      {/* Memori log dioperasikan ke Dashboard untuk dirender statis di tab Audit Trail */}
       {sessionId && isCompleted && (
         <AnalyticsDashboard 
           sessionId={sessionId} 
