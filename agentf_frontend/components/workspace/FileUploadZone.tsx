@@ -24,7 +24,7 @@ export function FileUploadZone({ onSessionCreated }: FileUploadZoneProps) {
   
   const [customPrompt, setCustomPrompt] = useState('')
   const [newsEnabled, setNewsEnabled] = useState(false)
-  const [engine, setEngine] = useState('Engine Alpha Pro')
+  const [engine, setEngine] = useState('Deepseek V4 PRO (Reasoning)')
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isScrollable, setIsScrollable] = useState(false)
@@ -297,7 +297,7 @@ export function FileUploadZone({ onSessionCreated }: FileUploadZoneProps) {
                       <div className="px-3 py-2 border-b border-slate-800/50 mb-1">
                         <span className="text-[10px] uppercase tracking-widest text-slate-500">Select AI Engine</span>
                       </div>
-                      {["Engine Alpha Pro", "Engine Beta", "Engine Gamma", "Engine Delta", "Engine Epsilon"].map((eng) => (
+                      {["Deepseek V4 PRO (Reasoning)", "Llama 3.3 70B Versatile", "Gemini 3.1 PRO (High)", "Claude Opus 4.8", "Qwen 3.7 Max"].map((eng) => (
                         <button
                           key={eng}
                           onClick={() => { setEngine(eng); setIsDropdownOpen(false) }}
