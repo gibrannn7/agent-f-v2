@@ -20,7 +20,7 @@ export function Sidebar() {
         {!isExpanded && !isHovered ? (
           <div className="flex items-center justify-center w-10 h-10">
             <img 
-              src="/images/logo.webp" 
+              src="/images/logo.png" 
               alt="AF" 
               className="w-6 h-6 object-contain"
             />
@@ -37,7 +37,7 @@ export function Sidebar() {
             
             <div className={`flex items-center transition-opacity duration-300 ${isExpanded ? 'opacity-100 ml-3' : 'opacity-0 w-0 hidden'}`}>
               <img 
-                src="/images/logo.webp" 
+                src="/images/logo.png" 
                 alt="AGENT-F" 
                 className="w-6 h-6 object-contain mr-3"
               />

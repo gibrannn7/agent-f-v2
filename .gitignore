@@ -26,26 +26,27 @@ agentf_frontend/npm-debug.log*
 agentf_frontend/yarn-debug.log*
 agentf_frontend/yarn-error.log*
 
-# Python (agentf_backend)
+# FASTAPI (agentf_backend)
+
+# Python virtual env
 agentf_backend/venv/
 agentf_backend/env/
 agentf_backend/ENV/
-agentf_backend/env.bak/
-agentf_backend/venv.bak/
-agentf_backend/__pycache__/
-agentf_backend/*.py[cod]
-agentf_backend/*$py.class
+
+# Python cache
+agentf_backend/**/__pycache__/
+agentf_backend/**/*.py[cod]
+
+# Testing & coverage
 agentf_backend/.pytest_cache/
 agentf_backend/.coverage
 agentf_backend/htmlcov/
 agentf_backend/.tox/
+
+# Build artifacts
 agentf_backend/build/
 agentf_backend/dist/
-agentf_backend/sdist/
-agentf_backend/var/
-agentf_backend/wheels/
-agentf_backend/*.egg-info/
-agentf_backend/.installed.cfg
+agentf_backend/**/*.egg-info/
 agentf_backend/*.egg
 
 # OS Files

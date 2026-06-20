@@ -34,13 +34,34 @@ export function FileUploadZone({ onSessionCreated }: FileUploadZoneProps) {
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const [greeting, setGreeting] = useState('Greetings')
+  const [greeting, setGreeting] = useState('')
+  const [typedGreeting, setTypedGreeting] = useState('')
 
   useEffect(() => {
     const hour = new Date().getHours()
-    if (hour < 12) setGreeting('Good Morning')
-    else if (hour < 18) setGreeting('Good Afternoon')
-    else setGreeting('Good Evening')
+
+    let text = 'Good Evening'
+    if (hour < 12) text = 'Good Morning'
+    else if (hour < 18) text = 'Good Afternoon'
+
+    setGreeting(text)
+
+    const startDelay = setTimeout(() => {
+      let index = 0
+
+      const typing = setInterval(() => {
+        setTypedGreeting(text.slice(0, index + 1))
+        index++
+
+        if (index >= text.length) {
+          clearInterval(typing)
+        }
+      }, 50)
+
+      return () => clearInterval(typing)
+    }, 1000)
+
+    return () => clearTimeout(startDelay)
   }, [])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -137,7 +158,10 @@ export function FileUploadZone({ onSessionCreated }: FileUploadZoneProps) {
       
       {/* Greetings Text Container - Fixed height to prevent layout shift */}
       <div className={`flex flex-col items-center justify-center transition-all duration-500 overflow-hidden ${files.length > 0 || isFullscreen ? 'h-0 opacity-0' : 'h-24 opacity-100'}`}>
-        <h1 className="text-5xl font-bold tracking-tight text-slate-100">{greeting}, Users</h1>
+        <h1 className="text-5xl font-bold tracking-tight text-slate-100">
+          {typedGreeting}
+          {typedGreeting.length === greeting.length && ', Users'}
+        </h1>
         <p className="text-slate-500 font-mono text-sm uppercase tracking-widest mt-3">Enterprise analytical sandbox is standing by.</p>
       </div>
 
