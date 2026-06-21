@@ -4,7 +4,7 @@ import asyncio
 import json
 import math
 from app.api.v1.endpoints.auth import verify_tenant_access
-from app.agents.state import state_store
+from app.agents.state import state_store, load_state_from_redis
 
 router = APIRouter()
 
@@ -64,6 +64,9 @@ async def stream_workspace_status(session_id: str, request: Request):
 @router.get("/results/{session_id}")
 async def get_workspace_results(session_id: str, tenant_id: str = Depends(verify_tenant_access)):
     state = state_store.get(session_id)
+    if not state:
+        state = await load_state_from_redis(session_id)
+        
     if not state:
         return {"error": "Session not found"}
         

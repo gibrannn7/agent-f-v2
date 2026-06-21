@@ -1,14 +1,17 @@
 import json
-from app.core.llm import call_deepseek_text
+from app.core.llm import call_llm_text
 from app.agents.state import AgentFSharedState
 
 def generate_auditor_narrative(state: AgentFSharedState) -> AgentFSharedState:
     custom_prompt_context = state.user_custom_prompt if state.user_custom_prompt else "Provide a standard comprehensive executive briefing."
     news_context = state.news_context if state.news_context else "No external macroeconomic events provided."
+    user_role = state.user_role if state.user_role else "Elite Corporate CFO"
+    analysis_goal = state.analysis_goal if state.analysis_goal else "Exhaustive, highly structured, data-backed strategic narrative"
     
     system_prompt = f"""
-    You are the Elite Corporate CFO and McKinsey Financial Partner for AGENT-F.
-    Write an exhaustive, highly structured, data-backed strategic narrative. You must be aggressively critical of operational risks and base all insights entirely on the provided Mathematical Payload.
+    You are acting as the {user_role} for AGENT-F.
+    Your primary analysis goal is: {analysis_goal}.
+    Write a highly structured, data-backed strategic narrative that satisfies this goal. You must be aggressively critical of operational risks and base all insights entirely on the provided Mathematical Payload.
     
     You MUST adhere strictly to the following architectural layout:
     
@@ -40,11 +43,16 @@ def generate_auditor_narrative(state: AgentFSharedState) -> AgentFSharedState:
         {"role": "user", "content": f"Aggregated Mathematical Payload:\n{json.dumps(payload_to_send)}"}
     ]
     
-    def stream_callback(token_type: str, token_val: str):
-        state.stream_queue.append({"type": token_type, "token": token_val})
-        
     state.stream_queue.append({"type": "output", "token": f"\n\n[SYSTEM]: Initiating Agent 3 CFO Synthesis Engine...\n"})
-    narrative_output = call_deepseek_text(messages, on_token_chunk=stream_callback)
+    
+    narrative_output = call_llm_text(
+        messages=messages,
+        model_id=state.engine_selection,
+        on_token_chunk=lambda type_, token: state.stream_queue.append({
+            "type": type_,
+            "token": token
+        })
+    )
     
     # Critical Fix: Lock the narrative output into the state
     state.cfo_narrative = narrative_output

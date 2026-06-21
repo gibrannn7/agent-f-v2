@@ -1,9 +1,9 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { Card } from '@/components/ui/card'
-import { fetchWithAuth } from '@/lib/api-client'
-import { FileSpreadsheet, Loader2, Send, Paperclip, ChevronDown, Check, X, Maximize2, Minimize2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/client'
+import { FileSpreadsheet, Loader2, Send, Paperclip, ChevronDown, Check, X, Maximize2, Minimize2, Lock, LogOut } from 'lucide-react'
 import { PipelineTracker } from '@/components/workspace/PipelineTracker'
 import { AnalyticsDashboard } from '@/components/workspace/AnalyticsDashboard'
 
@@ -28,6 +28,24 @@ const formatBytes = (bytes: number) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
+const TIERS = {
+  FREE: 0,
+  STANDARD: 1,
+  PRO: 2,
+  ENTERPRISE: 3
+}
+
+const AI_MODELS = [
+  { id: 'qwen/qwen3.6-27b', name: 'Qwen 3.6 27B (Groq)', tier: TIERS.FREE },
+  { id: 'llama-4-scout', name: 'Llama 4 Scout (Groq)', tier: TIERS.FREE },
+  { id: 'qwen3.5-plus', name: 'Qwen 3.5 Plus (Aliyun)', tier: TIERS.STANDARD },
+  { id: 'qwen3-max', name: 'Qwen 3 Max (Aliyun)', tier: TIERS.STANDARD },
+  { id: 'qwen3.7-plus', name: 'Qwen 3.7 Plus (Aliyun)', tier: TIERS.PRO },
+  { id: 'deepseek-v4-pro', name: 'DeepSeek V4 PRO (Reasoning)', tier: TIERS.PRO },
+  { id: 'gemini-3.1-pro', name: 'Gemini 3.1 PRO (High)', tier: TIERS.ENTERPRISE },
+  { id: 'claude-opus-4.8', name: 'Claude Opus 4.8', tier: TIERS.ENTERPRISE }
+]
+
 export function WorkspaceTerminal() {
   const [files, setFiles] = useState<File[]>([])
   const [isUploading, setIsUploading] = useState(false)
@@ -35,7 +53,8 @@ export function WorkspaceTerminal() {
   
   const [customPrompt, setCustomPrompt] = useState('')
   const [newsEnabled, setNewsEnabled] = useState(false)
-  const [engine, setEngine] = useState('Deepseek V4 PRO (Reasoning)')
+  const [engine, setEngine] = useState('qwen/qwen3.6-27b')
+  const [userTier, setUserTier] = useState<number>(TIERS.FREE) // Simulated subscription tier
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isScrollable, setIsScrollable] = useState(false)
@@ -51,6 +70,50 @@ export function WorkspaceTerminal() {
 
   const [interactions, setInteractions] = useState<Interaction[]>([])
 
+  const [userRole, setUserRole] = useState('')
+  const [analysisGoal, setAnalysisGoal] = useState('')
+  const [usePersona, setUsePersona] = useState(true)
+  const [isAuthLoading, setIsAuthLoading] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [showLoginModal, setShowLoginModal] = useState(false)
+
+  const router = useRouter()
+  const supabase = createClient()
+
+  useEffect(() => {
+    const initAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        setIsAuthenticated(false)
+        setIsAuthLoading(false)
+        return
+      }
+
+      setIsAuthenticated(true)
+      const metadata = session.user.user_metadata
+      if (!metadata?.role) {
+        router.push('/onboarding')
+        return
+      }
+
+      setUserRole(metadata.role)
+      setAnalysisGoal(metadata.goal || '')
+      setUserTier(metadata.tier !== undefined ? metadata.tier : TIERS.FREE)
+      setIsAuthLoading(false)
+    }
+
+    initAuth()
+  }, [router, supabase.auth])
+
+  const requireAuth = (callback: () => void) => {
+    if (!isAuthenticated) {
+      setShowLoginModal(true)
+      return
+    }
+    callback()
+  }
+
   useEffect(() => {
     const hour = new Date().getHours()
 
@@ -58,16 +121,21 @@ export function WorkspaceTerminal() {
     if (hour < 12) text = 'Good Morning'
     else if (hour < 18) text = 'Good Afternoon'
 
-    setGreeting(text)
+    setGreeting(`${text}, ${userRole || 'Analyst'}.`)
+  }, [userRole])
 
+  useEffect(() => {
+    if (!greeting) return;
+    
+    setTypedGreeting('')
     const startDelay = setTimeout(() => {
       let index = 0
 
       const typing = setInterval(() => {
-        setTypedGreeting(text.slice(0, index + 1))
+        setTypedGreeting(greeting.slice(0, index + 1))
         index++
 
-        if (index >= text.length) {
+        if (index >= greeting.length) {
           clearInterval(typing)
         }
       }, 50)
@@ -76,6 +144,21 @@ export function WorkspaceTerminal() {
     }, 1000)
 
     return () => clearTimeout(startDelay)
+  }, [greeting])
+  useEffect(() => {
+    const handlePersonaToggle = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setUsePersona(customEvent.detail);
+    };
+    window.addEventListener('personaToggle', handlePersonaToggle);
+    
+    // Initial load from local storage
+    const stored = localStorage.getItem('agentf_usePersona');
+    if (stored !== null) {
+      setUsePersona(stored === 'true');
+    }
+
+    return () => window.removeEventListener('personaToggle', handlePersonaToggle);
   }, [])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -130,57 +213,79 @@ export function WorkspaceTerminal() {
   }
 
   const handleUpload = async () => {
-    if (files.length === 0) {
-      setError('Mohon upload file data terlebih dahulu untuk menggunakan Sandbox Analytics.')
-      return
-    }
-    setIsUploading(true)
-    setError(null)
-    setIsFullscreen(false)
+    requireAuth(async () => {
+      if (files.length === 0 && !customPrompt.trim()) return
 
-    try {
-      const formData = new FormData()
-      files.forEach(file => {
-        formData.append('files', file)
-      })
-      if (customPrompt.trim()) {
-        formData.append('user_custom_prompt', customPrompt.trim())
+      const selectedModelInfo = AI_MODELS.find(m => m.id === engine)
+      if (selectedModelInfo && userTier < selectedModelInfo.tier) {
+        setError(`Akses ditolak: Model ${selectedModelInfo.name} memerlukan tier langganan yang lebih tinggi.`)
+        return
       }
-      formData.append('news_toggle', String(newsEnabled))
-      formData.append('engine_selection', engine)
 
-      const res = await fetchWithAuth('/api/v1/pipeline/process', {
-        method: 'POST',
-        body: formData,
-      })
+      try {
+        setIsUploading(true)
+        setError(null)
 
-      const data = await res.json()
-      if (data.session_id) {
-        setInteractions(prev => [...prev, {
-          id: Date.now().toString(),
-          prompt: customPrompt.trim() || 'Process dataset with default orchestration.',
-          sessionId: data.session_id,
-          status: 'running'
-        }])
-        setCustomPrompt('')
-        if (textareaRef.current) {
-          textareaRef.current.style.height = 'auto'
+        const formData = new FormData()
+        files.forEach(file => {
+          formData.append('files', file)
+        })
+        if (customPrompt.trim()) {
+          formData.append('user_custom_prompt', customPrompt.trim())
         }
-        // Small delay to scroll to bottom naturally after React updates
-        setTimeout(() => {
-          window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-        }, 100);
-      } else {
-        throw new Error('No session ID returned from orchestration server.')
+        formData.append('news_toggle', String(newsEnabled))
+        formData.append('engine_selection', engine)
+        
+        if (usePersona) {
+          if (userRole) formData.append('user_role', userRole)
+          if (analysisGoal) formData.append('analysis_goal', analysisGoal)
+        }
+
+        if (interactions.length > 0) {
+          formData.append('parent_session_id', interactions[interactions.length - 1].sessionId)
+        }
+
+        const res = await fetch('/api/v1/pipeline/process', {
+          method: 'POST',
+          body: formData,
+        })
+
+        const data = await res.json()
+        if (data.session_id) {
+          setInteractions(prev => [...prev, {
+            id: Date.now().toString(),
+            prompt: customPrompt.trim() || 'Process dataset with default orchestration.',
+            sessionId: data.session_id,
+            status: 'running'
+          }])
+          setCustomPrompt('')
+          if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto'
+          }
+          setTimeout(() => {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+          }, 100);
+        } else {
+          throw new Error('No session ID returned from orchestration server.')
+        }
+      } catch (err: any) {
+        setError(err.message || 'Failed to upload files and initialize pipeline.')
+      } finally {
+        setIsUploading(false)
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to upload files and initialize pipeline.')
-    } finally {
-      setIsUploading(false)
-    }
+    })
+  }
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-[#020202] flex items-center justify-center w-full">
+        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+      </div>
+    )
   }
 
   return (
+    <>
     <div className={`flex flex-col items-center ${interactions.length > 0 ? 'justify-start mt-4' : 'justify-center mt-12'} w-full max-w-6xl mx-auto space-y-8 px-4 transition-all duration-500 ${isFullscreen ? 'h-[85vh]' : 'min-h-[65vh]'}`}>
       
       {/* Greetings Text Container - Fixed height to prevent layout shift */}
@@ -188,7 +293,6 @@ export function WorkspaceTerminal() {
         <div className={`flex flex-col items-center justify-center transition-all duration-500 overflow-hidden ${files.length > 0 || isFullscreen ? 'h-0 opacity-0' : 'h-24 opacity-100'}`}>
           <h1 className="text-5xl font-bold tracking-tight text-slate-100">
             {typedGreeting}
-            {typedGreeting.length === greeting.length && ', Users'}
           </h1>
           <p className="text-slate-500 font-mono text-sm uppercase tracking-widest mt-3">Enterprise analytical sandbox is standing by.</p>
         </div>
@@ -300,7 +404,7 @@ export function WorkspaceTerminal() {
             {/* Attachment Button */}
             <button 
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => requireAuth(() => fileInputRef.current?.click())}
               className="p-2 mb-0.5 text-slate-500 hover:text-indigo-400 hover:bg-slate-800/50 rounded-lg transition-colors shrink-0"
               title="Attach Financial Matrix"
             >
@@ -351,13 +455,13 @@ export function WorkspaceTerminal() {
             {/* Submit Button */}
             <button
               type="button"
-              onClick={() => {
+              onClick={() => requireAuth(() => {
                 if (files.length === 0) {
                   setError("Mohon upload file data terlebih dahulu untuk menggunakan Sandbox Analytics.");
                   return;
                 }
                 handleUpload();
-              }}
+              })}
               disabled={isUploading}
               className={`p-2.5 ml-2 mb-0.5 bg-slate-800 text-slate-300 border border-slate-700 rounded-lg transition-all duration-300 flex items-center justify-center shrink-0 shadow-sm ${
                 files.length === 0 
@@ -376,44 +480,69 @@ export function WorkspaceTerminal() {
               <div className="relative">
                 <button 
                   type="button"
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  onClick={() => requireAuth(() => setIsDropdownOpen(!isDropdownOpen))}
                   className="flex items-center space-x-2 text-xs font-mono text-slate-400 hover:text-slate-200 transition-colors focus:outline-none"
                 >
-                  <span>{engine}</span>
-                  <ChevronDown className="h-3 w-3" />
+                  <span className="truncate">{AI_MODELS.find(m => m.id === engine)?.name || engine}</span>
+                  <ChevronDown className="h-3 w-3 shrink-0" />
                 </button>
                 
-                {/* Dropdown Menu */}
+                {/* Modal Menu */}
                 {isDropdownOpen && (
-                  <>
+                  <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    {/* Backdrop */}
                     <div 
-                      className="fixed inset-0 z-40" 
+                      className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
                       onClick={() => setIsDropdownOpen(false)}
                     ></div>
-                    <div className="absolute bottom-full left-0 mb-2 w-56 bg-[#0A0A0A] border border-slate-800 rounded-md shadow-2xl py-1 z-50 animate-in fade-in slide-in-from-bottom-2">
-                      <div className="px-3 py-2 border-b border-slate-800/50 mb-1">
-                        <span className="text-[10px] uppercase tracking-widest text-slate-500">Select AI Engine</span>
-                      </div>
-                      {["Deepseek V4 PRO (Reasoning)", "Llama 3.3 70B Versatile", "Gemini 3.1 PRO (High)", "Claude Opus 4.8", "Qwen 3.7 Max"].map((eng) => (
-                        <button
-                          key={eng}
-                          onClick={() => { setEngine(eng); setIsDropdownOpen(false) }}
-                          className="w-full text-left px-4 py-2.5 text-xs font-mono text-slate-400 hover:bg-slate-800/80 hover:text-slate-200 transition-colors flex items-center justify-between group/item"
-                        >
-                          {eng}
-                          {engine === eng && <Check className="h-3 w-3 text-indigo-400" />}
+                    
+                    {/* Modal Content */}
+                    <div className="relative w-full max-w-md bg-[#0A0A0A] border border-slate-800 rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                      <div className="px-4 py-3 border-b border-slate-800/80 flex items-center justify-between bg-[#050505]">
+                        <span className="text-sm font-medium text-slate-200">Select AI Engine</span>
+                        <button onClick={() => setIsDropdownOpen(false)} className="text-slate-500 hover:text-slate-300">
+                          <X className="w-4 h-4" />
                         </button>
-                      ))}
+                      </div>
+                      
+                      <div className="overflow-y-auto max-h-[60vh] p-2 space-y-1 scrollbar-thin scrollbar-thumb-slate-800">
+                        {AI_MODELS.map((model) => {
+                           const isLocked = userTier < model.tier;
+                           const tierName = Object.keys(TIERS).find(k => TIERS[k as keyof typeof TIERS] === model.tier);
+                           return (
+                             <button
+                                key={model.id}
+                                onClick={() => { if (!isLocked) { setEngine(model.id); setIsDropdownOpen(false) } }}
+                                className={`w-full text-left px-4 py-3 text-xs font-mono rounded-lg transition-colors flex items-center justify-between group/item ${
+                                  isLocked 
+                                    ? 'text-slate-600 cursor-not-allowed bg-transparent' 
+                                    : 'text-slate-300 hover:bg-slate-800/50 hover:text-white'
+                                } ${engine === model.id ? 'bg-indigo-500/10 border border-indigo-500/30' : 'border border-transparent'}`}
+                             >
+                                <div className="flex flex-col space-y-1">
+                                  <span className="flex items-center space-x-2">
+                                    {isLocked && <Lock className="w-3.5 h-3.5 text-slate-600" />}
+                                    <span className="text-sm font-medium">{model.name}</span>
+                                  </span>
+                                  <span className={`text-[10px] uppercase tracking-wider ${isLocked ? 'text-slate-700' : 'text-slate-500'}`}>
+                                    {isLocked ? `Requires ${tierName} Tier` : `Available on ${tierName} Tier`}
+                                  </span>
+                                </div>
+                                {!isLocked && engine === model.id && <Check className="h-4 w-4 text-indigo-400" />}
+                             </button>
+                           )
+                        })}
+                      </div>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
 
-              {/* External Data Stream Toggle */}
-              <div className="flex items-center space-x-2 border-l border-slate-800/50 pl-4">
+              {/* News Toggle */}
+              <div className="flex items-center space-x-2">
                 <button
                   type="button"
-                  onClick={() => setNewsEnabled(!newsEnabled)}
+                  onClick={() => requireAuth(() => setNewsEnabled(!newsEnabled))}
                   className={`text-xs font-mono px-3 py-1 rounded transition-colors ${
                     newsEnabled 
                       ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.15)]' 
@@ -422,15 +551,6 @@ export function WorkspaceTerminal() {
                 >
                   News API
                 </button>
-                <div className="relative group/info cursor-help">
-                  <span className="text-slate-500 text-[10px] font-bold w-4 h-4 rounded-full border border-slate-700 flex items-center justify-center group-hover/info:text-indigo-400 group-hover/info:border-indigo-400 transition-colors rotate-180">
-                    !
-                  </span>
-                  {/* Tooltip */}
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-3 py-1.5 bg-[#0A0A0A] border border-slate-800 shadow-xl rounded text-[10px] text-slate-300 opacity-0 group-hover/info:opacity-100 transition-opacity pointer-events-none z-10">
-                    aktifkan fitur ini untuk melihat api news
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -445,11 +565,42 @@ export function WorkspaceTerminal() {
         />
       </div>
 
+      {/* ERROR DISPLAY */}
       {error && (
-        <div className="w-full max-w-4xl rounded border border-red-900/50 bg-red-950/30 p-4 text-xs font-mono text-red-400 animate-in fade-in shrink-0">
+        <div className="text-red-500 bg-red-500/10 border border-red-500/20 px-4 py-2 rounded-md text-sm mt-4 animate-in fade-in duration-300 w-full max-w-4xl text-center">
           {error}
         </div>
       )}
     </div>
+
+    {/* FORCE LOGIN MODAL */}
+    {showLoginModal && (
+      <div className="fixed inset-0 z-[99] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowLoginModal(false)}></div>
+        <div className="relative w-full max-w-sm bg-[#0A0A0A] border border-slate-800 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] p-6 text-center animate-in zoom-in-95 duration-200">
+           <div className="w-12 h-12 bg-indigo-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-indigo-500/20">
+             <LogOut className="w-6 h-6 text-indigo-400 rotate-180" />
+           </div>
+           <h3 className="text-xl font-bold text-slate-100 mb-2">Authentication Required</h3>
+           <p className="text-sm text-slate-400 mb-6">You need to log in to access compute resources, upload files, and execute pipeline operations.</p>
+           
+           <div className="flex flex-col space-y-3">
+             <button 
+               onClick={() => router.push('/login')}
+               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-4 py-2.5 text-sm font-semibold transition-all shadow-[0_0_15px_rgba(79,70,229,0.3)]"
+             >
+               Sign In with Google
+             </button>
+             <button 
+               onClick={() => setShowLoginModal(false)}
+               className="w-full bg-transparent hover:bg-slate-800 text-slate-400 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors"
+             >
+               Cancel
+             </button>
+           </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }

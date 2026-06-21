@@ -1,7 +1,7 @@
 import json
 import re
 from pydantic import ValidationError
-from app.core.llm import call_deepseek_text
+from app.core.llm import call_llm_text, call_llm_json
 from app.core.sandbox import JupyterSandboxManager
 from app.agents.state import AgentFSharedState
 import asyncio
@@ -12,9 +12,12 @@ TOKEN_LIMIT = 50000
 def generate_and_execute_code(state: AgentFSharedState, schema_info: dict) -> AgentFSharedState:
     custom_prompt_context = state.user_custom_prompt if state.user_custom_prompt else "No custom focus provided. Apply standard enterprise financial aggregations."
     news_injection = f"\nNews Context Available: {state.news_context}\n" if hasattr(state, 'news_context') and getattr(state, 'news_context') else ""
+    user_role = state.user_role if state.user_role else "Elite Quant and FP&A Director"
+    analysis_goal = state.analysis_goal if state.analysis_goal else "Standard operational performance metrics"
     
     system_prompt = f"""
-    You are the Elite Quant and FP&A Director Code Engine for AGENT-F. 
+    You are acting as the {user_role} Code Engine for AGENT-F. 
+    Your primary analysis goal is: {analysis_goal}.
     You have access to a persistent, stateful Jupyter Notebook environment.
     
     CRITICAL MANDATES:
@@ -69,7 +72,7 @@ def generate_and_execute_code(state: AgentFSharedState, schema_info: dict) -> Ag
         for step in range(MAX_STEPS):
             state.stream_queue.append({"type": "output", "token": f"\n\n[SYSTEM]: Agent Iteration {step + 1}/{MAX_STEPS}...\n"})
             
-            response_text = call_deepseek_text(messages, on_token_chunk=stream_callback)
+            response_text = call_llm_text(messages, model_id=state.engine_selection, on_token_chunk=stream_callback)
             messages.append({"role": "assistant", "content": response_text})
             
             # Check for JSON block (meaning we are done)

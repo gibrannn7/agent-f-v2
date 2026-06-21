@@ -1,5 +1,5 @@
 import json
-from app.core.llm import call_deepseek_json
+from app.core.llm import call_llm_json
 from app.agents.state import AgentFSharedState, FileMetadata, SchemaRegistration
 
 def process_metadata(state: AgentFSharedState, file_metadata: FileMetadata) -> AgentFSharedState:
@@ -30,14 +30,15 @@ def process_metadata(state: AgentFSharedState, file_metadata: FileMetadata) -> A
     {json.dumps(schema_registry, indent=2, default=str)}
     """
     
-    messages = [
-        {"role": "system", "content": "You output JSON strictly mapping to standard financial categories and define precise isolated or joined aggregation strategies."},
-        {"role": "user", "content": prompt}
-    ]
-    
-    response_str = call_deepseek_json(messages)
+    response = call_llm_json(
+        messages=[
+            {"role": "system", "content": "You output JSON strictly mapping to standard financial categories and define precise isolated or joined aggregation strategies."},
+            {"role": "user", "content": prompt}
+        ],
+        model_id=state.engine_selection
+    )
     try:
-        parsed = json.loads(response_str)
+        parsed = json.loads(response)
         registration = SchemaRegistration(
             file_id=file_metadata.file_id,
             actions=parsed.get("actions", [])

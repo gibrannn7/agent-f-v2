@@ -64,6 +64,7 @@ const masonryItems = [
 const navItems = [
   { label: 'HOME', href: '/' },
   { label: 'WORKSPACE', href: '/workspace' },
+  { label: 'PRICING', href: '/pricing' },
   { label: 'LEARN MORE', href: '/learn-more' },
 ];
 

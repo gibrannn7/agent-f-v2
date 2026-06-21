@@ -7,7 +7,7 @@ import traceback
 import asyncio
 import concurrent.futures
 from app.api.v1.endpoints.auth import verify_tenant_access
-from app.agents.state import AgentFSharedState, state_store
+from app.agents.state import AgentFSharedState, state_store, save_state_to_redis, load_state_from_redis
 from app.services.metadata_extractor import extract_metadata
 from app.agents.metadata_explorer import process_metadata
 from app.agents.code_engine import generate_and_execute_code
@@ -80,13 +80,22 @@ def _execute_pipeline_core(state: AgentFSharedState, file_records: List[dict], u
 def process_pipeline_background(
     session_id: str, 
     tenant_id: str, 
-    file_records: List[dict], 
-    temp_dir: str, 
+    file_records: list, 
+    temp_dir: str,
     user_custom_prompt: Optional[str],
-    ui_toggle_on: bool
+    news_toggle: bool,
+    user_role: Optional[str] = None,
+    analysis_goal: Optional[str] = None
 ):
-    state = state_store.get(session_id, AgentFSharedState())
+    state = state_store.get(session_id)
+    if not state:
+        return
+    
+    state.tenant_id = tenant_id
+    state.session_id = session_id
     state.user_custom_prompt = user_custom_prompt
+    state.user_role = user_role
+    state.analysis_goal = analysis_goal
     
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         future = executor.submit(
@@ -94,7 +103,7 @@ def process_pipeline_background(
             state, 
             file_records, 
             user_custom_prompt, 
-            ui_toggle_on
+            news_toggle
         )
         try:
             future.result(timeout=600.0)
@@ -105,7 +114,8 @@ def process_pipeline_background(
         except Exception as e:
             pass
         finally:
-            state_store[session_id] = state
+            asyncio.run(save_state_to_redis(session_id, state))
+            state_store.pop(session_id, None)
             asyncio.run(async_purge_session_directory(temp_dir))
 
 @router.post("/process", status_code=status.HTTP_202_ACCEPTED)
@@ -114,10 +124,22 @@ async def process_pipeline(
     files: List[UploadFile] = File(...),
     user_custom_prompt: Optional[str] = Form(None),
     news_toggle: bool = Form(False),
+    engine_selection: str = Form("qwen/qwen3.6-27b"),
+    user_role: Optional[str] = Form(None),
+    analysis_goal: Optional[str] = Form(None),
+    parent_session_id: Optional[str] = Form(None),
     tenant_id: str = Depends(verify_tenant_access)
 ):
     session_id = str(uuid.uuid4())
-    state_store[session_id] = AgentFSharedState()
+    state = AgentFSharedState()
+    
+    if parent_session_id:
+        parent_state = await load_state_from_redis(parent_session_id)
+        if parent_state:
+            state.file_registry_map = parent_state.file_registry_map
+            
+    state.engine_selection = engine_selection
+    state_store[session_id] = state
     
     file_records = []
     
@@ -147,9 +169,11 @@ async def process_pipeline(
         session_id, 
         tenant_id, 
         file_records, 
-        temp_dir, 
+        temp_dir,
         user_custom_prompt,
-        news_toggle
+        news_toggle,
+        user_role,
+        analysis_goal
     )
     
     return {"session_id": session_id, "status": "202 Accepted"}

@@ -4,6 +4,10 @@ import os
 class Settings(BaseSettings):
     DEEPSEEK_API_KEY: str = ""
     DEEPSEEK_BASE_URL: str = ""
+    QWEN_API_KEY: str = ""
+    OPENAI_QWEN_ENDPOINT: str = ""
+    QWEN_DASHSCOPE: str = ""
+    GROQ_API_KEY: str = ""
     NEXT_PUBLIC_SUPABASE_URL: str = ""
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: str = ""
     SUPABASE_PASSWORD: str = ""
