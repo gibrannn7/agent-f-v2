@@ -19,12 +19,11 @@ router = APIRouter()
 
 def _execute_pipeline_core(state: AgentFSharedState, file_records: List[dict], user_custom_prompt: Optional[str], ui_toggle_on: bool):
     try:
-        state.stream_queue.append({"type": "output", "token": "[SYSTEM]: Evaluating macro news triggers...\n"})
-        should_fetch_news = asyncio.run(trigger_news_check(user_custom_prompt, ui_toggle_on))
-        
-        if should_fetch_news:
-            state.stream_queue.append({"type": "output", "token": "[SYSTEM]: Fetching external macroeconomic realities...\n"})
-            trigger_keywords = ["inflation", "tax", "ppn", "interest rates", "tariff", "market", "sentimen", "kebijakan"]
+        if ui_toggle_on:
+            should_fetch_news = asyncio.run(trigger_news_check(user_custom_prompt, ui_toggle_on))
+            if should_fetch_news:
+                state.stream_queue.append({"type": "output", "token": "[SYSTEM]: Trigger keyword detected. Fetching macroeconomic sentiment...\n"})
+                trigger_keywords = ["inflation", "tax", "ppn", "interest rates", "tariff", "market", "sentimen", "kebijakan"]
             prompt_lower = user_custom_prompt.lower() if user_custom_prompt else ""
             extracted_keywords = [kw for kw in trigger_keywords if kw in prompt_lower]
             if not extracted_keywords:
@@ -40,13 +39,14 @@ def _execute_pipeline_core(state: AgentFSharedState, file_records: List[dict], u
             file_path = record["file_path"]
             file_id = record["file_id"]
             
-            state.stream_queue.append({"type": "output", "token": f"[SYSTEM]: Extracting structural metadata for {file_name} using Pandas Shield...\n"})
+            state.stream_queue.append({"type": "output", "token": f"[SYSTEM]: Ingesting {file_name} into Sandbox...\n"})
+            state.stream_queue.append({"type": "output", "token": f"[SYSTEM]: Running Pandas Shield profiling & structural extraction...\n"})
             metadata = extract_metadata(file_id, file_name, file_path)
             state.file_registry_map[file_id] = metadata
             
-            state.stream_queue.append({"type": "output", "token": f"[SYSTEM]: Metadata extracted successfully. Sending schema to Agent 1 (Schema Architect)...\n"})
+            state.stream_queue.append({"type": "output", "token": f"[SYSTEM]: Metadata mapped. Invoking Agent 1 (Schema Architect)...\n"})
             state = process_metadata(state, metadata)
-            state.stream_queue.append({"type": "output", "token": f"\n[SYSTEM]: Agent 1 finished Schema Architecture map for {file_name}.\n"})
+            state.stream_queue.append({"type": "output", "token": f"\n[SYSTEM]: Agent 1 architecture map established for {file_name}.\n"})
             
         schema_info = {k: v.model_dump() for k, v in state.semantic_schema_register.items()}
         
@@ -87,7 +87,6 @@ def process_pipeline_background(
 ):
     state = state_store.get(session_id, AgentFSharedState())
     state.user_custom_prompt = user_custom_prompt
-    state.stream_queue.append({"type": "output", "token": f"[SYSTEM]: Started processing for tenant {tenant_id}\n"})
     
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         future = executor.submit(

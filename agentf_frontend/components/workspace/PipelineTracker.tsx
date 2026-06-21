@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -18,6 +19,7 @@ interface PipelineTrackerProps {
 export function PipelineTracker({ sessionId, onComplete }: PipelineTrackerProps) {
   const [streamData, setStreamData] = useState<StreamToken[]>([])
   const [status, setStatus] = useState<'connecting' | 'processing' | 'completed' | 'error'>('connecting')
+  const [isMinimized, setIsMinimized] = useState(false)
   
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [isAutoScroll, setIsAutoScroll] = useState(true)
@@ -117,19 +119,39 @@ export function PipelineTracker({ sessionId, onComplete }: PipelineTrackerProps)
             </div>
             <span className="text-slate-500 text-[10px] font-mono ml-4 select-none uppercase tracking-widest">agent_f_sandbox_env</span>
           </div>
-          <div className="text-[10px] font-mono font-bold tracking-wider">
-            {status === 'connecting' && <span className="text-yellow-500 animate-pulse">ESTABLISHING_LINK...</span>}
-            {status === 'processing' && <span className="text-emerald-500 animate-pulse">EXECUTING_MODELS</span>}
-            {status === 'completed' && <span className="text-indigo-400">PIPELINE_COMPLETE</span>}
-            {status === 'error' && <span className="text-red-500">SYS_HALT</span>}
+          <div className="flex items-center space-x-4">
+            <div className="text-[10px] font-mono font-bold tracking-wider">
+              {status === 'connecting' && <span className="text-yellow-500 animate-pulse">ESTABLISHING_LINK...</span>}
+              {status === 'processing' && <span className="text-emerald-500 animate-pulse">EXECUTING_MODELS</span>}
+              {status === 'completed' && <span className="text-indigo-400">PIPELINE_COMPLETE</span>}
+              {status === 'error' && <span className="text-red-500">SYS_HALT</span>}
+            </div>
+            <button 
+              onClick={() => setIsMinimized(!isMinimized)} 
+              className="text-slate-500 hover:text-slate-300 transition-colors bg-slate-800/50 p-1 rounded"
+              title={isMinimized ? "Expand Terminal" : "Minimize Terminal"}
+            >
+              {isMinimized ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
+            </button>
           </div>
         </div>
         
-        <div 
-          ref={scrollContainerRef}
-          onScroll={handleScroll}
-          className="p-6 font-mono text-xs h-[600px] overflow-y-auto overflow-x-hidden leading-relaxed"
-        >
+        {isMinimized ? (
+          <div className="p-4 font-mono text-[11px] text-emerald-500 flex items-center space-x-3 bg-[#050505]">
+            <span className="animate-spin text-indigo-500">⚙</span>
+            <span className="truncate">
+              {streamData.length > 0 
+                ? streamData[streamData.length - 1].content.split('\n').filter(l => l.trim()).pop()?.replace(/\[SYSTEM\]:?\s*/, '') || 'Initializing environment...' 
+                : 'Initializing environment...'}
+            </span>
+            <span className="animate-pulse font-bold">_</span>
+          </div>
+        ) : (
+          <div 
+            ref={scrollContainerRef}
+            onScroll={handleScroll}
+            className="p-6 font-mono text-xs h-[600px] overflow-y-auto overflow-x-hidden leading-relaxed"
+          >
           {streamData.map((block, idx) => (
              <div key={idx} className="mb-1 text-emerald-400">
                <ReactMarkdown
@@ -190,6 +212,7 @@ export function PipelineTracker({ sessionId, onComplete }: PipelineTrackerProps)
             </div>
           )}
         </div>
+        )}
       </CardContent>
     </Card>
   )

@@ -27,6 +27,7 @@ class AgentFSharedState(BaseModel):
     user_custom_prompt: Optional[str] = None
     news_context: Optional[str] = None
     cfo_narrative: Optional[str] = None
+    chart_payloads: List[str] = Field(default_factory=list)
 
     @field_validator("analytical_data")
     @classmethod

@@ -77,7 +77,7 @@ export function Sidebar() {
       <div className={`border-t border-slate-800/50 py-3 shrink-0 flex ${isExpanded ? 'px-3' : 'justify-center'}`}>
         <div className={`flex items-center rounded-md hover:bg-slate-900/50 cursor-pointer transition-colors overflow-hidden ${isExpanded ? 'px-2 py-2 w-full' : 'p-1'}`}>
           <div className="w-8 h-8 rounded bg-indigo-950 border border-indigo-900/50 flex items-center justify-center shrink-0">
-            <span className="text-xs font-bold text-indigo-400 font-mono tracking-tighter">FG</span>
+            <span className="text-xs font-bold text-indigo-400 font-mono tracking-tighter">O</span>
           </div>
           <div className={`flex flex-col ml-3 transition-all duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0 w-0 hidden'}`}>
             <span className="text-xs font-medium text-slate-300 whitespace-nowrap">Users</span>

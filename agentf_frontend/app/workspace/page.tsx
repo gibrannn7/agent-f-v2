@@ -1,57 +1,12 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { FileUploadZone } from '@/components/workspace/FileUploadZone'
-import { PipelineTracker } from '@/components/workspace/PipelineTracker'
-import { AnalyticsDashboard } from '@/components/workspace/AnalyticsDashboard'
-
-interface StreamToken {
-  type: string;
-  content: string;
-}
+import React from 'react'
+import { WorkspaceTerminal } from '@/components/workspace/WorkspaceTerminal'
 
 export default function WorkspacePage() {
-  const [sessionId, setSessionId] = useState<string | null>(null)
-  const [isCompleted, setIsCompleted] = useState(false)
-  const [executionLog, setExecutionLog] = useState<StreamToken[]>([])
-  const [greeting, setGreeting] = useState('')
-
-  useEffect(() => {
-    const hour = new Date().getHours()
-    let timeGreeting = 'Good evening'
-    if (hour >= 5 && hour < 12) timeGreeting = 'Good morning'
-    else if (hour >= 12 && hour < 18) timeGreeting = 'Good afternoon'
-    
-    setGreeting(`${timeGreeting}, Users.`)
-  }, [])
-
   return (
-    <div className="animate-in fade-in duration-500 max-w-6xl mx-auto p-8 space-y-8 min-h-full">
-      
-            {!sessionId && (
-        <FileUploadZone onSessionCreated={(id) => {
-          setSessionId(id)
-          setIsCompleted(false)
-          setExecutionLog([])
-        }} />
-      )}
-
-      {sessionId && !isCompleted && (
-        <PipelineTracker 
-          sessionId={sessionId} 
-          onComplete={(logData) => {
-            setExecutionLog(logData)
-            setIsCompleted(true)
-          }} 
-        />
-      )}
-
-      {sessionId && isCompleted && (
-        <AnalyticsDashboard 
-          sessionId={sessionId} 
-          executionLog={executionLog} 
-        />
-      )}
+    <div className="animate-in fade-in duration-500 max-w-7xl mx-auto p-4 md:p-8 min-h-full">
+      <WorkspaceTerminal />
     </div>
   )
 }
